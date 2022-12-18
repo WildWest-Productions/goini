@@ -1,5 +1,8 @@
 # goini - A no-dependence builtin-like ini config file parser
 
+Should work with most type with `encoding.TextUnmarshaler` and
+`encoding.TextMarshaler` interfaces.
+
 ## Install
 
 ```
@@ -89,14 +92,16 @@ sys_enable = NO
 
  - Supports comments, both `#` and `;`
  - Define with and without whitespace (`foo=bar` and `foo = bar`)
- - Supports common value types (bool, int, float32, float64, string)
+ - Supports common value types (bool, int, float32, float64, string) and all
+   (most) custom types with `encoding.TextUnmarshaler` and `encoding.TextMarshaler` interfaces
  - No dependencies (other then builtins)
 
 ## Limitations
 
-As of the first public commit:
+There are some limitations:
  - sub-struct pointers will not work (willfix)
  - cannot unmarshal into a map (wontfix)
+ - comments will not be perserved when unmarshaling/marshaling (willfix)
 
 ## License
 

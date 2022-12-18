@@ -12,6 +12,7 @@
 package parser
 
 import (
+	"encoding"
 	"fmt"
 	"reflect"
 )
@@ -41,13 +42,29 @@ func getStructTags(s interface{}) *values {
 	return ret
 }
 
+func impReader(value reflect.Value) bool {
+	if value.Kind() == reflect.Struct {
+		if value.CanAddr() {
+			v := value.Addr().Interface()
+			_, ok := v.(encoding.TextUnmarshaler)
+			return ok
+		}
+	}
+
+	if value.Kind() != reflect.Struct {
+		return true
+	}
+
+	return false
+}
+
 func Unmarshal(structRet interface{}, value reflect.Value, iniMap map[string]string, subSectorName string) error {
 	structFields := getStructTags(value.Interface())
 
 	for i := 0; i < value.NumField(); i++ {
 		iniValue, ok := iniMap[subSectorName+"#"+structFields.fieldTags[i]]
 		//fmt.Printf("StructFieldName=%s StructTag=%s StructType=%s Ini=%s\n\n", structFields.fieldNames[i], structFields.fieldTags[i], structFields.interfaceType[structFields.fieldTags[i]], iniValue)
-		if value.Field(i).Kind() != reflect.Struct {
+		if impReader(value.Field(i)) {
 			// Only set the value if it is found in the ini
 			if ok {
 				setValue(value.Field(i), structFields.interfaceType[structFields.fieldTags[i]], iniValue)

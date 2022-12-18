@@ -12,6 +12,7 @@
 package parser
 
 import (
+	"encoding"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -45,6 +46,24 @@ func setValue(s reflect.Value, typeT, value string) {
 			s.SetBool(false)
 		}
 	default:
+		// Try to check to see if the type implements encoding.TextUnmarshaler
+		if s.CanAddr() {
+			v := s.Addr().Interface()
+
+			u, ok := v.(encoding.TextUnmarshaler)
+			if !ok {
+				panic(fmt.Sprintf("type: %s does not implement encoding.TextUnmarshaler", typeT))
+			}
+
+			err := u.UnmarshalText([]byte(value))
+			if err != nil {
+				panic(fmt.Sprintf("error using text unmarshaler: %s", err))
+			}
+			ff := reflect.ValueOf(u)
+			s.Set(ff.Elem())
+			return
+		}
+
 		panic(fmt.Sprintf("goini: unknown type: %s (please report this if you need this type)", typeT))
 	}
 }

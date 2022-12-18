@@ -13,6 +13,7 @@ package parser
 
 import (
 	"bytes"
+	"encoding"
 	"fmt"
 	"reflect"
 )
@@ -24,15 +25,15 @@ func marshaler(buf *bytes.Buffer, value reflect.Value, sector string) error {
 	// sub-structs.
 
 	for i := 0; i < value.NumField(); i++ {
-		if value.Field(i).Kind() != reflect.Struct && sector == "" {
-			writeExp(buf, structFields.fieldTags[i], value.Field(i).Interface())
+		if impWritter(value.Field(i)) && sector == "" {
+			writeExp(buf, structFields.fieldTags[i], value.Field(i))
 		}
 	}
 
 	for i := 0; i < value.NumField(); i++ {
-		if value.Field(i).Kind() != reflect.Struct {
+		if impWritter(value.Field(i)) {
 			if sector != "" {
-				writeExp(buf, structFields.fieldTags[i], value.Field(i).Interface())
+				writeExp(buf, structFields.fieldTags[i], value.Field(i))
 			}
 		} else {
 			sectorT := value.FieldByName(structFields.fieldNames[i])
@@ -52,8 +53,35 @@ func marshaler(buf *bytes.Buffer, value reflect.Value, sector string) error {
 	return nil
 }
 
-func writeExp(buf *bytes.Buffer, key string, val interface{}) {
-	buf.WriteString(fmt.Sprintf("%s = %v", key, val))
+func impWritter(value reflect.Value) bool {
+	if value.Kind() == reflect.Struct {
+		v := value.Interface()
+		_, ok := v.(encoding.TextMarshaler)
+		return ok
+	}
+
+	if value.Kind() != reflect.Struct {
+		return true
+	}
+
+	return false
+}
+
+//func writeExp(buf *bytes.Buffer, key string, val interface{}) {
+func writeExp(buf *bytes.Buffer, key string, val reflect.Value) {
+	v := val.Interface()
+
+	u, ok := v.(encoding.TextMarshaler)
+	if ok {
+		b, err := u.MarshalText()
+		if err != nil {
+			panic(fmt.Sprintf("error using text marshaler: %s", err))
+		}
+		buf.WriteString(fmt.Sprintf("%s = %s", key, string(b)))
+	} else {
+		buf.WriteString(fmt.Sprintf("%s = %v", key, val.Interface()))
+	}
+
 	buf.WriteString("\n")
 }
 
